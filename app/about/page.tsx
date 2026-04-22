@@ -14,7 +14,7 @@ function getShortQuote(content: string) {
     return 'Personas apraksts tiks pievienots drīzumā.'
   }
 
-  return firstBlock.length > 170 ? `${firstBlock.slice(0, 167)}...` : firstBlock
+  return firstBlock.length > 110 ? `${firstBlock.slice(0, 107)}...` : firstBlock
 }
 
 export default async function Page() {
@@ -32,6 +32,11 @@ export default async function Page() {
     quote: getShortQuote(person.content),
     name: person.name,
     role: [person.occupation, person.company].filter(Boolean).join(' @ ') || 'Team member',
+    socialLinks: {
+      email: person.email || undefined,
+      linkedin: person.linkedin || undefined,
+      facebook: person.twitter || undefined,
+    },
   }))
 
   return (

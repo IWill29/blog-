@@ -88,11 +88,11 @@ export default async function NewPersonPage({ searchParams }: NewPersonPageProps
           </label>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-2">
           <label className="text-sm">
-            <span className="mb-1 block font-medium">X/Twitter</span>
+            <span className="mb-1 block font-medium">Facebook</span>
             <input
-              name="twitter"
+              name="facebook"
               className="focus:border-primary-500 focus:ring-primary-500 block w-full rounded-md border border-gray-300 bg-white px-3 py-2 dark:border-gray-700 dark:bg-gray-900"
             />
           </label>
@@ -100,13 +100,6 @@ export default async function NewPersonPage({ searchParams }: NewPersonPageProps
             <span className="mb-1 block font-medium">LinkedIn</span>
             <input
               name="linkedin"
-              className="focus:border-primary-500 focus:ring-primary-500 block w-full rounded-md border border-gray-300 bg-white px-3 py-2 dark:border-gray-700 dark:bg-gray-900"
-            />
-          </label>
-          <label className="text-sm">
-            <span className="mb-1 block font-medium">GitHub</span>
-            <input
-              name="github"
               className="focus:border-primary-500 focus:ring-primary-500 block w-full rounded-md border border-gray-300 bg-white px-3 py-2 dark:border-gray-700 dark:bg-gray-900"
             />
           </label>

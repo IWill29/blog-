@@ -14,6 +14,11 @@ const cards = [
     description: 'Pārvaldi About sadaļas personas un sociālos linkus.',
     href: '/admin/persons',
   },
+  {
+    title: 'Logo settings',
+    description: 'Maini logo attēlu un Header nosaukumu.',
+    href: '/admin/settings',
+  },
 ]
 
 export default function AdminDashboardPage() {

@@ -70,6 +70,32 @@ export async function resolvePersonAvatarValue({
   return currentAvatar
 }
 
+export async function resolveSiteLogoValue({
+  formData,
+  currentLogo = '',
+}: {
+  formData: FormData
+  currentLogo?: string
+}) {
+  const removeLogo = String(formData.get('removeLogo') || '') === 'on'
+  if (removeLogo) {
+    return ''
+  }
+
+  const logoInput = String(formData.get('logoImage') || '').trim()
+  const file = formData.get('logoFile')
+
+  if (file instanceof File && file.size > 0) {
+    return saveUploadedImage(file)
+  }
+
+  if (logoInput) {
+    return logoInput
+  }
+
+  return currentLogo
+}
+
 async function saveUploadedImage(file: File) {
   if (!file.type.startsWith('image/')) {
     throw new Error('Invalid image type')

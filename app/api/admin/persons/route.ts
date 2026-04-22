@@ -10,9 +10,8 @@ export async function POST(request: NextRequest) {
   const occupation = String(formData.get('occupation') || '').trim()
   const company = String(formData.get('company') || '').trim()
   const email = String(formData.get('email') || '').trim()
-  const twitter = String(formData.get('twitter') || '').trim()
+  const twitter = String(formData.get('facebook') || '').trim()
   const linkedin = String(formData.get('linkedin') || '').trim()
-  const github = String(formData.get('github') || '').trim()
   const content = String(formData.get('content') || '').trim()
 
   if (!name || !content) {
@@ -34,7 +33,6 @@ export async function POST(request: NextRequest) {
       email,
       twitter,
       linkedin,
-      github,
       avatar,
       content,
     })

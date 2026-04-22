@@ -34,3 +34,12 @@ model Person {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 }
+
+model SiteSettings {
+  id          String   @id @default("default")
+  siteName    String?
+  headerTitle String?
+  logoImage   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}

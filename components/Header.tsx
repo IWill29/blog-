@@ -1,12 +1,15 @@
 import siteMetadata from '@/data/siteMetadata'
 import headerNavLinks from '@/data/headerNavLinks'
 import Logo from '@/data/logo.svg'
+import Image from '@/components/Image'
+import { getPublicSiteSettings } from '@/lib/site-settings'
 import Link from './Link'
 import MobileNav from './MobileNav'
 import ThemeSwitch from './ThemeSwitch'
 import SearchButton from './SearchButton'
 
-const Header = () => {
+const Header = async () => {
+  const settings = await getPublicSiteSettings()
   let headerClass = 'flex items-center w-full bg-white dark:bg-gray-950 justify-between py-10'
   if (siteMetadata.stickyNav) {
     headerClass += ' sticky top-0 z-50'
@@ -17,15 +20,18 @@ const Header = () => {
       <Link href="/" aria-label={siteMetadata.headerTitle}>
         <div className="flex items-center justify-between">
           <div className="mr-3">
-            <Logo />
+            {settings.logoImage ? (
+              <Image
+                src={settings.logoImage}
+                alt="Site logo"
+                width={320}
+                height={80}
+                className="h-20 w-auto max-w-80 object-contain dark:brightness-0 dark:invert"
+              />
+            ) : (
+              <Logo />
+            )}
           </div>
-          {typeof siteMetadata.headerTitle === 'string' ? (
-            <div className="hidden h-6 text-2xl font-semibold sm:block">
-              {siteMetadata.headerTitle}
-            </div>
-          ) : (
-            siteMetadata.headerTitle
-          )}
         </div>
       </Link>
       <div className="flex items-center space-x-4 leading-5 sm:-mr-6 sm:space-x-6">

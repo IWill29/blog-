@@ -17,18 +17,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           >
             Dashboard
           </Link>
-          <Link
-            href="/admin/posts"
-            className="rounded-md px-3 py-1 font-medium text-gray-800 hover:bg-gray-100 dark:text-gray-100 dark:hover:bg-gray-800"
-          >
-            Posts
-          </Link>
-          <Link
-            href="/admin/persons"
-            className="rounded-md px-3 py-1 font-medium text-gray-800 hover:bg-gray-100 dark:text-gray-100 dark:hover:bg-gray-800"
-          >
-            Persons
-          </Link>
         </div>
 
         <form action="/api/admin/auth" method="POST">
