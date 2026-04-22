@@ -1,59 +1,42 @@
-import Image from '@/components/Image'
-import SocialIcon from '@/components/social-icons'
+import TestimonialGrid from '@/components/ui/testimonial'
 import { genPageMetadata } from 'app/seo'
 import { getAllPublicPersons } from '@/lib/public-data'
 
 export const metadata = genPageMetadata({ title: 'About' })
 
-function renderParagraphs(content: string) {
-  return content
+function getShortQuote(content: string) {
+  const firstBlock = content
     .split(/\n{2,}/)
     .map((block) => block.trim())
-    .filter(Boolean)
-    .map((block, index) => (
-      <p key={index} className="whitespace-pre-wrap">
-        {block}
-      </p>
-    ))
+    .find(Boolean)
+
+  if (!firstBlock) {
+    return 'Personas apraksts tiks pievienots drīzumā.'
+  }
+
+  return firstBlock.length > 170 ? `${firstBlock.slice(0, 167)}...` : firstBlock
 }
 
 export default async function Page() {
-  const featuredAuthors = await getAllPublicPersons()
+  const persons = await getAllPublicPersons()
+  const fallbackAvatars = [
+    'https://images.unsplash.com/photo-1633332755192-727a05c4013d?q=80&w=600',
+    'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=600',
+    'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?q=80&w=600&h=600&auto=format&fit=crop',
+    'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=600&auto=format&fit=crop',
+  ]
+
+  const testimonialItems = persons.map((person, index) => ({
+    id: person.slug,
+    imageSrc: person.avatar || fallbackAvatars[index % fallbackAvatars.length],
+    quote: getShortQuote(person.content),
+    name: person.name,
+    role: [person.occupation, person.company].filter(Boolean).join(' @ ') || 'Team member',
+  }))
 
   return (
-    <div className="divide-y divide-gray-200 dark:divide-gray-700">
-      <div className="space-y-12 pt-8 pb-8">
-        {featuredAuthors.map((author) => (
-          <section
-            key={author.slug}
-            className="items-start space-y-2 xl:grid xl:grid-cols-3 xl:gap-x-8 xl:space-y-0"
-          >
-            <div className="flex flex-col items-center space-x-2 pt-8">
-              {author.avatar && (
-                <Image
-                  src={author.avatar}
-                  alt={`${author.name} avatar`}
-                  width={192}
-                  height={192}
-                  className="h-48 w-48 rounded-full"
-                />
-              )}
-              <h2 className="pt-4 pb-2 text-2xl leading-8 font-bold tracking-tight">{author.name}</h2>
-              <div className="text-gray-500 dark:text-gray-400">{author.occupation}</div>
-              <div className="text-gray-500 dark:text-gray-400">{author.company}</div>
-              <div className="flex space-x-3 pt-6">
-                <SocialIcon kind="mail" href={author.email ? `mailto:${author.email}` : undefined} />
-                <SocialIcon kind="github" href={author.github} />
-                <SocialIcon kind="linkedin" href={author.linkedin} />
-                <SocialIcon kind="x" href={author.twitter} />
-              </div>
-            </div>
-            <div className="prose dark:prose-invert max-w-none pt-8 pb-8 xl:col-span-2">
-              {renderParagraphs(author.content)}
-            </div>
-          </section>
-        ))}
-      </div>
+    <div className="pt-8 pb-10">
+      <TestimonialGrid items={testimonialItems} className="mx-auto max-w-6xl" />
     </div>
   )
 }

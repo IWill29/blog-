@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { deletePerson, updatePerson } from '@/lib/admin-content'
+import { deletePerson, getPersonBySlug, updatePerson } from '@/lib/admin-content'
+import { resolvePersonAvatarValue } from '@/lib/admin-upload'
 import { slug as slugify } from 'github-slugger'
 
 export async function POST(
@@ -32,7 +33,6 @@ export async function POST(
   const twitter = String(formData.get('twitter') || '').trim()
   const linkedin = String(formData.get('linkedin') || '').trim()
   const github = String(formData.get('github') || '').trim()
-  const avatar = String(formData.get('avatar') || '').trim()
   const content = String(formData.get('content') || '').trim()
 
   if (!name || !content) {
@@ -45,6 +45,12 @@ export async function POST(
   const safeSlug = slugInput || slugify(name)
 
   try {
+    const existingPerson = await getPersonBySlug(currentSlug)
+    const avatar = await resolvePersonAvatarValue({
+      formData,
+      currentAvatar: existingPerson.avatar,
+    })
+
     const updatedSlug = await updatePerson(currentSlug, {
       name,
       slug: safeSlug,

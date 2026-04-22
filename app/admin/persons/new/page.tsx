@@ -28,7 +28,7 @@ export default async function NewPersonPage({ searchParams }: NewPersonPageProps
         </p>
       )}
 
-      <form action="/api/admin/persons" method="POST" className="space-y-4">
+      <form action="/api/admin/persons" method="POST" encType="multipart/form-data" className="space-y-4">
         <div className="grid gap-4 md:grid-cols-2">
           <label className="text-sm">
             <span className="mb-1 block font-medium">Name *</span>
@@ -75,12 +75,16 @@ export default async function NewPersonPage({ searchParams }: NewPersonPageProps
             />
           </label>
           <label className="text-sm">
-            <span className="mb-1 block font-medium">Avatar path</span>
+            <span className="mb-1 block font-medium">Upload avatar</span>
             <input
-              name="avatar"
-              placeholder="/static/images/avatar.png"
-              className="focus:border-primary-500 focus:ring-primary-500 block w-full rounded-md border border-gray-300 bg-white px-3 py-2 dark:border-gray-700 dark:bg-gray-900"
+              name="avatarFile"
+              type="file"
+              accept="image/*"
+              className="focus:border-primary-500 focus:ring-primary-500 block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-900"
             />
+            <span className="mt-1 block text-xs text-gray-500 dark:text-gray-400">
+              Augšupielādē attēlu personai no sava datora.
+            </span>
           </label>
         </div>
 

@@ -50,7 +50,12 @@ export default async function EditPersonPage({ params, searchParams }: EditPerso
         </p>
       )}
 
-      <form action={`/api/admin/persons/${routeParams.slug}`} method="POST" className="space-y-4">
+      <form
+        action={`/api/admin/persons/${routeParams.slug}`}
+        method="POST"
+        encType="multipart/form-data"
+        className="space-y-4"
+      >
         <div className="grid gap-4 md:grid-cols-2">
           <label className="text-sm">
             <span className="mb-1 block font-medium">Name *</span>
@@ -101,14 +106,23 @@ export default async function EditPersonPage({ params, searchParams }: EditPerso
             />
           </label>
           <label className="text-sm">
-            <span className="mb-1 block font-medium">Avatar path</span>
+            <span className="mb-1 block font-medium">Upload new avatar</span>
             <input
-              name="avatar"
-              defaultValue={person.avatar}
-              className="focus:border-primary-500 focus:ring-primary-500 block w-full rounded-md border border-gray-300 bg-white px-3 py-2 dark:border-gray-700 dark:bg-gray-900"
+              name="avatarFile"
+              type="file"
+              accept="image/*"
+              className="focus:border-primary-500 focus:ring-primary-500 block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-900"
             />
+            <span className="mt-1 block text-xs text-gray-500 dark:text-gray-400">
+              Ja izvēlēsies failu, tas aizvietos esošo avatāru.
+            </span>
           </label>
         </div>
+
+        <label className="flex items-center gap-2 text-sm">
+          <input name="removeAvatar" type="checkbox" className="h-4 w-4 rounded border-gray-300" />
+          <span>Noņemt esošo avatāru</span>
+        </label>
 
         <div className="grid gap-4 md:grid-cols-3">
           <label className="text-sm">

@@ -34,19 +34,7 @@ export async function resolvePostImageValue({
   const file = formData.get('imageFile')
 
   if (file instanceof File && file.size > 0) {
-    if (!file.type.startsWith('image/')) {
-      throw new Error('Invalid image type')
-    }
-
-    const { base, extension } = sanitizeFilename(file.name)
-    const fileName = `${Date.now()}-${base}${extension}`
-    const filePath = path.join(UPLOAD_DIR, fileName)
-    const fileBuffer = Buffer.from(await file.arrayBuffer())
-
-    await fs.mkdir(UPLOAD_DIR, { recursive: true })
-    await fs.writeFile(filePath, fileBuffer)
-
-    return `/static/images/uploads/${fileName}`
+    return saveUploadedImage(file)
   }
 
   if (imageInput) {
@@ -54,4 +42,46 @@ export async function resolvePostImageValue({
   }
 
   return currentImage
+}
+
+export async function resolvePersonAvatarValue({
+  formData,
+  currentAvatar = '',
+}: {
+  formData: FormData
+  currentAvatar?: string
+}) {
+  const removeAvatar = String(formData.get('removeAvatar') || '') === 'on'
+  if (removeAvatar) {
+    return ''
+  }
+
+  const avatarInput = String(formData.get('avatar') || '').trim()
+  const file = formData.get('avatarFile')
+
+  if (file instanceof File && file.size > 0) {
+    return saveUploadedImage(file)
+  }
+
+  if (avatarInput) {
+    return avatarInput
+  }
+
+  return currentAvatar
+}
+
+async function saveUploadedImage(file: File) {
+  if (!file.type.startsWith('image/')) {
+    throw new Error('Invalid image type')
+  }
+
+  const { base, extension } = sanitizeFilename(file.name)
+  const fileName = `${Date.now()}-${base}${extension}`
+  const filePath = path.join(UPLOAD_DIR, fileName)
+  const fileBuffer = Buffer.from(await file.arrayBuffer())
+
+  await fs.mkdir(UPLOAD_DIR, { recursive: true })
+  await fs.writeFile(filePath, fileBuffer)
+
+  return `/static/images/uploads/${fileName}`
 }
