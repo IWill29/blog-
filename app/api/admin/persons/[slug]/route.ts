@@ -14,9 +14,13 @@ export async function POST(
   if (action === 'delete') {
     try {
       await deletePerson(currentSlug)
-      return NextResponse.redirect(new URL('/admin/persons?success=deleted', request.url))
+      return NextResponse.redirect(new URL('/admin/persons?success=deleted', request.url), {
+        status: 303,
+      })
     } catch {
-      return NextResponse.redirect(new URL('/admin/persons?error=delete', request.url))
+      return NextResponse.redirect(new URL('/admin/persons?error=delete', request.url), {
+        status: 303,
+      })
     }
   }
 
@@ -33,7 +37,8 @@ export async function POST(
 
   if (!name || !content) {
     return NextResponse.redirect(
-      new URL(`/admin/persons/${currentSlug}/edit?error=required`, request.url)
+      new URL(`/admin/persons/${currentSlug}/edit?error=required`, request.url),
+      { status: 303 }
     )
   }
 
@@ -54,12 +59,14 @@ export async function POST(
     })
 
     return NextResponse.redirect(
-      new URL(`/admin/persons/${updatedSlug}/edit?success=updated`, request.url)
+      new URL(`/admin/persons/${updatedSlug}/edit?success=updated`, request.url),
+      { status: 303 }
     )
   } catch (error) {
     const reason = error instanceof Error && error.message.includes('exists') ? 'exists' : 'invalid'
     return NextResponse.redirect(
-      new URL(`/admin/persons/${currentSlug}/edit?error=${reason}`, request.url)
+      new URL(`/admin/persons/${currentSlug}/edit?error=${reason}`, request.url),
+      { status: 303 }
     )
   }
 }

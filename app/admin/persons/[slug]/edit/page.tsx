@@ -12,9 +12,23 @@ type EditPersonPageProps = {
 export default async function EditPersonPage({ params, searchParams }: EditPersonPageProps) {
   const routeParams = await params
   const search = await searchParams
-  const person = await getPersonBySlug(routeParams.slug)
+  let person: Awaited<ReturnType<typeof getPersonBySlug>> | null = null
+  let databaseError = ''
+  try {
+    person = await getPersonBySlug(routeParams.slug)
+  } catch (error) {
+    databaseError = error instanceof Error ? error.message : 'Database connection failed'
+  }
   const showSuccess = Boolean(search.success)
   const showError = Boolean(search.error)
+
+  if (!person) {
+    return (
+      <div className="rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
+        Nevar ielādēt personu: {databaseError}. Pārbaudi `DATABASE_URL` un palaid `yarn prisma:push`.
+      </div>
+    )
+  }
 
   return (
     <div>

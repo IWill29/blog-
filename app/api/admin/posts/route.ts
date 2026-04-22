@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createPost } from '@/lib/admin-content'
+import { resolvePostImageValue } from '@/lib/admin-upload'
 import { slug as slugify } from 'github-slugger'
 
 function splitTags(rawTags: string) {
@@ -25,20 +26,32 @@ export async function POST(request: NextRequest) {
   const safeSlug = slugInput || slugify(title)
 
   try {
+    const image = await resolvePostImageValue({ formData })
+
     await createPost({
       title,
       slug: safeSlug,
       date,
       summary,
+      image,
       tags: splitTags(tagsInput),
       content,
     })
 
-    return NextResponse.redirect(new URL('/admin/posts?success=created', request.url))
+    return NextResponse.redirect(new URL('/admin/posts?success=created', request.url), {
+      status: 303,
+    })
   } catch (error) {
-    const reason = error instanceof Error && error.message.includes('exists') ? 'exists' : 'invalid'
+    console.error('Create post failed:', error)
+    const errorMessage = error instanceof Error ? error.message : ''
+    const reason = errorMessage.includes('exists')
+      ? 'exists'
+      : errorMessage.includes('Invalid image type')
+        ? 'image'
+        : 'invalid'
     return NextResponse.redirect(
-      new URL(`/admin/posts/new?error=${reason}&slug=${encodeURIComponent(safeSlug)}`, request.url)
+      new URL(`/admin/posts/new?error=${reason}&slug=${encodeURIComponent(safeSlug)}`, request.url),
+      { status: 303 }
     )
   }
 }

@@ -9,7 +9,12 @@ type NewPostPageProps = {
 
 export default async function NewPostPage({ searchParams }: NewPostPageProps) {
   const params = await searchParams
-  const hasError = Boolean(params.error)
+  const error = params.error || ''
+  const hasError = Boolean(error)
+  const errorMessage =
+    error === 'image'
+      ? 'Attēla fails nav derīgs. Izvēlies JPG, PNG, WEBP vai citu image failu.'
+      : 'Neizdevās izveidot ierakstu. Pārbaudi laukus un slug unikālumu.'
 
   return (
     <div>
@@ -24,11 +29,11 @@ export default async function NewPostPage({ searchParams }: NewPostPageProps) {
 
       {hasError && (
         <p className="mb-4 rounded-md border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300">
-          Neizdevās izveidot ierakstu. Pārbaudi laukus un slug unikālumu.
+          {errorMessage}
         </p>
       )}
 
-      <form action="/api/admin/posts" method="POST" className="space-y-4">
+      <form action="/api/admin/posts" method="POST" encType="multipart/form-data" className="space-y-4">
         <div className="grid gap-4 md:grid-cols-2">
           <label className="text-sm">
             <span className="mb-1 block font-medium">Title *</span>
@@ -74,6 +79,19 @@ export default async function NewPostPage({ searchParams }: NewPostPageProps) {
             name="summary"
             className="focus:border-primary-500 focus:ring-primary-500 block w-full rounded-md border border-gray-300 bg-white px-3 py-2 dark:border-gray-700 dark:bg-gray-900"
           />
+        </label>
+
+        <label className="text-sm">
+          <span className="mb-1 block font-medium">Upload image</span>
+          <input
+            name="imageFile"
+            type="file"
+            accept="image/*"
+            className="focus:border-primary-500 focus:ring-primary-500 block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-900"
+          />
+          <span className="mt-1 block text-xs text-gray-500 dark:text-gray-400">
+            Ja izvēlēsies failu, tas automātiski aizvietos URL lauku.
+          </span>
         </label>
 
         <label className="text-sm">

@@ -1,16 +1,12 @@
-import { promises as fs } from 'fs'
-import path from 'path'
-import matter from 'gray-matter'
 import { slug as slugify } from 'github-slugger'
-
-const BLOG_DIR = path.join(process.cwd(), 'data', 'blog')
-const AUTHORS_DIR = path.join(process.cwd(), 'data', 'authors')
+import { getPrismaClient } from '@/lib/prisma'
 
 type PostPayload = {
   title: string
   slug: string
   date: string
   summary?: string
+  image?: string
   tags?: string[]
   content: string
 }
@@ -28,26 +24,9 @@ type PersonPayload = {
   content: string
 }
 
-async function listMdxFiles(baseDir: string): Promise<string[]> {
-  const entries = await fs.readdir(baseDir, { withFileTypes: true })
-  const files = await Promise.all(
-    entries.map(async (entry) => {
-      const entryPath = path.join(baseDir, entry.name)
-      if (entry.isDirectory()) {
-        return listMdxFiles(entryPath)
-      }
-      return entry.name.endsWith('.mdx') ? [entryPath] : []
-    })
-  )
-  return files.flat()
-}
-
-async function fileExists(filePath: string) {
-  try {
-    await fs.access(filePath)
-    return true
-  } catch {
-    return false
+function assertDatabaseConfigured() {
+  if (!process.env.DATABASE_URL) {
+    throw new Error('DATABASE_URL is missing. Configure Neon connection string in .env.local')
   }
 }
 
@@ -73,202 +52,200 @@ function normalizePersonSlug(input: string) {
   return normalized
 }
 
-function createMdxFile(content: string, data: Record<string, unknown>) {
-  return matter.stringify(content.trim(), data).trimEnd() + '\n'
+function normalizeDate(input: string) {
+  const parsed = new Date(input)
+  if (Number.isNaN(parsed.getTime())) {
+    throw new Error('Invalid date')
+  }
+  return parsed
 }
 
-function buildPostFilePath(postSlug: string) {
-  const normalizedSlug = normalizePostSlug(postSlug)
-  return path.join(BLOG_DIR, `${normalizedSlug}.mdx`)
-}
-
-function buildPersonFilePath(personSlug: string) {
-  const normalizedSlug = normalizePersonSlug(personSlug)
-  return path.join(AUTHORS_DIR, `${normalizedSlug}.mdx`)
-}
 
 export async function listPosts() {
-  const files = await listMdxFiles(BLOG_DIR)
-  const posts = await Promise.all(
-    files.map(async (filePath) => {
-      const fileContent = await fs.readFile(filePath, 'utf8')
-      const parsed = matter(fileContent)
-      const slug = path.relative(BLOG_DIR, filePath).replace(/\\/g, '/').replace(/\.mdx$/, '')
+  assertDatabaseConfigured()
+  const prisma = getPrismaClient()
 
-      return {
-        slug,
-        title: String(parsed.data.title || slug),
-        date: String(parsed.data.date || ''),
-      }
-    })
-  )
+  const posts = await prisma.post.findMany({
+    select: {
+      slug: true,
+      title: true,
+      date: true,
+    },
+    orderBy: { date: 'desc' },
+  })
 
-  return posts.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+  return posts.map((post) => ({
+    slug: post.slug,
+    title: post.title,
+    date: post.date.toISOString().slice(0, 10),
+  }))
 }
 
 export async function getPostBySlug(postSlug: string) {
-  const filePath = buildPostFilePath(postSlug)
-  const fileContent = await fs.readFile(filePath, 'utf8')
-  const parsed = matter(fileContent)
+  assertDatabaseConfigured()
+  const prisma = getPrismaClient()
+  const normalizedSlug = normalizePostSlug(postSlug)
+  const post = await prisma.post.findUnique({
+    where: { slug: normalizedSlug },
+  })
+
+  if (!post) {
+    throw new Error('Post not found')
+  }
 
   return {
-    slug: normalizePostSlug(postSlug),
-    title: String(parsed.data.title || ''),
-    date: String(parsed.data.date || ''),
-    summary: String(parsed.data.summary || ''),
-    tags: Array.isArray(parsed.data.tags) ? parsed.data.tags.map(String) : [],
-    content: parsed.content.trim(),
+    slug: post.slug,
+    title: post.title,
+    date: post.date.toISOString().slice(0, 10),
+    summary: post.summary || '',
+    image: post.image || '',
+    tags: post.tags || [],
+    content: post.content || '',
   }
 }
 
 export async function createPost(payload: PostPayload) {
+  assertDatabaseConfigured()
+  const prisma = getPrismaClient()
   const postSlug = normalizePostSlug(payload.slug)
-  const filePath = buildPostFilePath(postSlug)
-  await fs.mkdir(path.dirname(filePath), { recursive: true })
+  const postDate = normalizeDate(payload.date)
 
-  if (await fileExists(filePath)) {
-    throw new Error('Post already exists')
-  }
+  await prisma.post.create({
+    data: {
+      title: payload.title,
+      slug: postSlug,
+      date: postDate,
+      summary: payload.summary || null,
+      image: payload.image || null,
+      tags: payload.tags || [],
+      content: payload.content.trim(),
+    },
+  })
 
-  const fileData: Record<string, unknown> = {
-    title: payload.title,
-    date: payload.date,
-  }
-
-  if (payload.summary) fileData.summary = payload.summary
-  if (payload.tags && payload.tags.length > 0) fileData.tags = payload.tags
-
-  await fs.writeFile(filePath, createMdxFile(payload.content, fileData), 'utf8')
   return postSlug
 }
 
 export async function updatePost(currentSlug: string, payload: PostPayload) {
-  const oldPath = buildPostFilePath(currentSlug)
+  assertDatabaseConfigured()
+  const prisma = getPrismaClient()
+  const oldSlug = normalizePostSlug(currentSlug)
   const newSlug = normalizePostSlug(payload.slug)
-  const newPath = buildPostFilePath(newSlug)
-  await fs.mkdir(path.dirname(newPath), { recursive: true })
-  const oldNormalizedSlug = normalizePostSlug(currentSlug)
+  const postDate = normalizeDate(payload.date)
 
-  if (newSlug !== oldNormalizedSlug && (await fileExists(newPath))) {
-    throw new Error('Post already exists')
-  }
+  await prisma.post.update({
+    where: { slug: oldSlug },
+    data: {
+      title: payload.title,
+      slug: newSlug,
+      date: postDate,
+      summary: payload.summary || null,
+      image: payload.image || null,
+      tags: payload.tags || [],
+      content: payload.content.trim(),
+    },
+  })
 
-  const fileData: Record<string, unknown> = {
-    title: payload.title,
-    date: payload.date,
-  }
-
-  if (payload.summary) fileData.summary = payload.summary
-  if (payload.tags && payload.tags.length > 0) fileData.tags = payload.tags
-
-  if (oldPath !== newPath) {
-    await fs.rename(oldPath, newPath)
-  }
-
-  await fs.writeFile(newPath, createMdxFile(payload.content, fileData), 'utf8')
   return newSlug
 }
 
 export async function deletePost(postSlug: string) {
-  const filePath = buildPostFilePath(postSlug)
-  await fs.unlink(filePath)
+  assertDatabaseConfigured()
+  const prisma = getPrismaClient()
+  const normalizedSlug = normalizePostSlug(postSlug)
+  await prisma.post.delete({ where: { slug: normalizedSlug } })
 }
 
 export async function listPersons() {
-  const files = await listMdxFiles(AUTHORS_DIR)
-  const people = await Promise.all(
-    files.map(async (filePath) => {
-      const fileContent = await fs.readFile(filePath, 'utf8')
-      const parsed = matter(fileContent)
-      const slug = path.basename(filePath, '.mdx')
-
-      return {
-        slug,
-        name: String(parsed.data.name || slug),
-        occupation: String(parsed.data.occupation || ''),
-        company: String(parsed.data.company || ''),
-      }
-    })
-  )
-
-  return people.sort((a, b) => a.name.localeCompare(b.name))
+  assertDatabaseConfigured()
+  const prisma = getPrismaClient()
+  return prisma.person.findMany({
+    select: {
+      slug: true,
+      name: true,
+      occupation: true,
+      company: true,
+    },
+    orderBy: { name: 'asc' },
+  })
 }
 
 export async function getPersonBySlug(personSlug: string) {
+  assertDatabaseConfigured()
+  const prisma = getPrismaClient()
   const normalizedSlug = normalizePersonSlug(personSlug)
-  const filePath = buildPersonFilePath(normalizedSlug)
-  const fileContent = await fs.readFile(filePath, 'utf8')
-  const parsed = matter(fileContent)
+  const person = await prisma.person.findUnique({
+    where: { slug: normalizedSlug },
+  })
+
+  if (!person) {
+    throw new Error('Person not found')
+  }
 
   return {
-    slug: normalizedSlug,
-    name: String(parsed.data.name || ''),
-    occupation: String(parsed.data.occupation || ''),
-    company: String(parsed.data.company || ''),
-    email: String(parsed.data.email || ''),
-    twitter: String(parsed.data.twitter || ''),
-    linkedin: String(parsed.data.linkedin || ''),
-    github: String(parsed.data.github || ''),
-    avatar: String(parsed.data.avatar || ''),
-    content: parsed.content.trim(),
+    slug: person.slug,
+    name: person.name,
+    occupation: person.occupation || '',
+    company: person.company || '',
+    email: person.email || '',
+    twitter: person.twitter || '',
+    linkedin: person.linkedin || '',
+    github: person.github || '',
+    avatar: person.avatar || '',
+    content: person.content || '',
   }
 }
 
 export async function createPerson(payload: PersonPayload) {
+  assertDatabaseConfigured()
+  const prisma = getPrismaClient()
   const personSlug = normalizePersonSlug(payload.slug)
-  const filePath = buildPersonFilePath(personSlug)
 
-  if (await fileExists(filePath)) {
-    throw new Error('Person already exists')
-  }
+  await prisma.person.create({
+    data: {
+      name: payload.name,
+      slug: personSlug,
+      occupation: payload.occupation || null,
+      company: payload.company || null,
+      email: payload.email || null,
+      twitter: payload.twitter || null,
+      linkedin: payload.linkedin || null,
+      github: payload.github || null,
+      avatar: payload.avatar || null,
+      content: payload.content.trim(),
+    },
+  })
 
-  const fileData: Record<string, unknown> = {
-    name: payload.name,
-  }
-
-  if (payload.avatar) fileData.avatar = payload.avatar
-  if (payload.occupation) fileData.occupation = payload.occupation
-  if (payload.company) fileData.company = payload.company
-  if (payload.email) fileData.email = payload.email
-  if (payload.twitter) fileData.twitter = payload.twitter
-  if (payload.linkedin) fileData.linkedin = payload.linkedin
-  if (payload.github) fileData.github = payload.github
-
-  await fs.writeFile(filePath, createMdxFile(payload.content, fileData), 'utf8')
   return personSlug
 }
 
 export async function updatePerson(currentSlug: string, payload: PersonPayload) {
-  const oldPath = buildPersonFilePath(currentSlug)
+  assertDatabaseConfigured()
+  const prisma = getPrismaClient()
+  const oldSlug = normalizePersonSlug(currentSlug)
   const newSlug = normalizePersonSlug(payload.slug)
-  const newPath = buildPersonFilePath(newSlug)
-  const oldNormalizedSlug = normalizePersonSlug(currentSlug)
 
-  if (newSlug !== oldNormalizedSlug && (await fileExists(newPath))) {
-    throw new Error('Person already exists')
-  }
+  await prisma.person.update({
+    where: { slug: oldSlug },
+    data: {
+      name: payload.name,
+      slug: newSlug,
+      occupation: payload.occupation || null,
+      company: payload.company || null,
+      email: payload.email || null,
+      twitter: payload.twitter || null,
+      linkedin: payload.linkedin || null,
+      github: payload.github || null,
+      avatar: payload.avatar || null,
+      content: payload.content.trim(),
+    },
+  })
 
-  const fileData: Record<string, unknown> = {
-    name: payload.name,
-  }
-
-  if (payload.avatar) fileData.avatar = payload.avatar
-  if (payload.occupation) fileData.occupation = payload.occupation
-  if (payload.company) fileData.company = payload.company
-  if (payload.email) fileData.email = payload.email
-  if (payload.twitter) fileData.twitter = payload.twitter
-  if (payload.linkedin) fileData.linkedin = payload.linkedin
-  if (payload.github) fileData.github = payload.github
-
-  if (oldPath !== newPath) {
-    await fs.rename(oldPath, newPath)
-  }
-
-  await fs.writeFile(newPath, createMdxFile(payload.content, fileData), 'utf8')
   return newSlug
 }
 
 export async function deletePerson(personSlug: string) {
-  const filePath = buildPersonFilePath(personSlug)
-  await fs.unlink(filePath)
+  assertDatabaseConfigured()
+  const prisma = getPrismaClient()
+  const normalizedSlug = normalizePersonSlug(personSlug)
+  await prisma.person.delete({ where: { slug: normalizedSlug } })
 }

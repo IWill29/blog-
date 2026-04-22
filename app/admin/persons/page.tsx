@@ -9,7 +9,13 @@ type PersonsPageProps = {
 }
 
 export default async function AdminPersonsPage({ searchParams }: PersonsPageProps) {
-  const people = await listPersons()
+  let people: Awaited<ReturnType<typeof listPersons>> = []
+  let databaseError = ''
+  try {
+    people = await listPersons()
+  } catch (error) {
+    databaseError = error instanceof Error ? error.message : 'Database connection failed'
+  }
   const params = await searchParams
   const showSuccess = Boolean(params.success)
   const showError = Boolean(params.error)
@@ -38,6 +44,11 @@ export default async function AdminPersonsPage({ searchParams }: PersonsPageProp
       {showError && (
         <p className="mb-4 rounded-md border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300">
           Neizdevās izpildīt darbību. Pamēģini vēlreiz.
+        </p>
+      )}
+      {databaseError && (
+        <p className="mb-4 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-300">
+          Neon DB nav pieslēgts: {databaseError}. Ieliec reālu `DATABASE_URL` un palaid `yarn prisma:push`.
         </p>
       )}
 

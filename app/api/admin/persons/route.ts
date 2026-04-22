@@ -16,7 +16,9 @@ export async function POST(request: NextRequest) {
   const content = String(formData.get('content') || '').trim()
 
   if (!name || !content) {
-    return NextResponse.redirect(new URL('/admin/persons/new?error=required', request.url))
+    return NextResponse.redirect(new URL('/admin/persons/new?error=required', request.url), {
+      status: 303,
+    })
   }
 
   const safeSlug = slugInput || slugify(name)
@@ -35,11 +37,14 @@ export async function POST(request: NextRequest) {
       content,
     })
 
-    return NextResponse.redirect(new URL('/admin/persons?success=created', request.url))
+    return NextResponse.redirect(new URL('/admin/persons?success=created', request.url), {
+      status: 303,
+    })
   } catch (error) {
     const reason = error instanceof Error && error.message.includes('exists') ? 'exists' : 'invalid'
     return NextResponse.redirect(
-      new URL(`/admin/persons/new?error=${reason}&slug=${encodeURIComponent(safeSlug)}`, request.url)
+      new URL(`/admin/persons/new?error=${reason}&slug=${encodeURIComponent(safeSlug)}`, request.url),
+      { status: 303 }
     )
   }
 }

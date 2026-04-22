@@ -1,24 +1,27 @@
-import { Authors, allAuthors } from 'contentlayer/generated'
-import { MDXLayoutRenderer } from 'pliny/mdx-components'
 import Image from '@/components/Image'
 import SocialIcon from '@/components/social-icons'
 import { genPageMetadata } from 'app/seo'
+import { getAllPublicPersons } from '@/lib/public-data'
 
 export const metadata = genPageMetadata({ title: 'About' })
 
-export default function Page() {
-  const featuredAuthorSlugs = ['default', 'linda-audere', 'janis-berzins']
-  const featuredAuthors = featuredAuthorSlugs
-    .map((authorSlug) => allAuthors.find((author) => author.slug === authorSlug))
-    .filter(Boolean) as Authors[]
+function renderParagraphs(content: string) {
+  return content
+    .split(/\n{2,}/)
+    .map((block) => block.trim())
+    .filter(Boolean)
+    .map((block, index) => (
+      <p key={index} className="whitespace-pre-wrap">
+        {block}
+      </p>
+    ))
+}
+
+export default async function Page() {
+  const featuredAuthors = await getAllPublicPersons()
 
   return (
     <div className="divide-y divide-gray-200 dark:divide-gray-700">
-      <div className="space-y-2 pt-6 pb-8 md:space-y-5">
-        <h1 className="text-3xl leading-9 font-extrabold tracking-tight text-gray-900 sm:text-4xl sm:leading-10 md:text-6xl md:leading-14 dark:text-gray-100">
-          About
-        </h1>
-      </div>
       <div className="space-y-12 pt-8 pb-8">
         {featuredAuthors.map((author) => (
           <section
@@ -43,11 +46,10 @@ export default function Page() {
                 <SocialIcon kind="github" href={author.github} />
                 <SocialIcon kind="linkedin" href={author.linkedin} />
                 <SocialIcon kind="x" href={author.twitter} />
-                <SocialIcon kind="bluesky" href={author.bluesky} />
               </div>
             </div>
             <div className="prose dark:prose-invert max-w-none pt-8 pb-8 xl:col-span-2">
-              <MDXLayoutRenderer code={author.body.code} />
+              {renderParagraphs(author.content)}
             </div>
           </section>
         ))}

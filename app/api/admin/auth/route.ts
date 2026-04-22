@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
   const action = String(formData.get('action') || 'login')
 
   if (action === 'logout') {
-    const response = NextResponse.redirect(new URL('/admin/login', request.url))
+    const response = NextResponse.redirect(new URL('/admin/login', request.url), { status: 303 })
     response.cookies.delete(ADMIN_SESSION_COOKIE)
     return response
   }
@@ -26,14 +26,16 @@ export async function POST(request: NextRequest) {
   const sessionToken = await getAdminSessionToken()
 
   if (!expectedUsername || !expectedPassword || !sessionToken) {
-    return NextResponse.redirect(new URL('/admin/login?error=config', request.url))
+    return NextResponse.redirect(new URL('/admin/login?error=config', request.url), { status: 303 })
   }
 
   if (username !== expectedUsername || password !== expectedPassword) {
-    return NextResponse.redirect(new URL('/admin/login?error=credentials', request.url))
+    return NextResponse.redirect(new URL('/admin/login?error=credentials', request.url), {
+      status: 303,
+    })
   }
 
-  const response = NextResponse.redirect(new URL(nextPath, request.url))
+  const response = NextResponse.redirect(new URL(nextPath, request.url), { status: 303 })
   response.cookies.set(ADMIN_SESSION_COOKIE, sessionToken, {
     httpOnly: true,
     sameSite: 'lax',
